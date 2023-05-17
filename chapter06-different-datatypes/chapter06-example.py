@@ -173,7 +173,7 @@ dateDF = (
     .withColumn("today", current_date())
     .withColumn("now", current_timestamp())
 )
-dateDF.createOrReplaceTempView("dateTable")
+
 dateDF.printSchema()
 
 ## Adding and subtracting dates
@@ -187,6 +187,7 @@ from pyspark.sql.functions import datediff, months_between, to_date
 dateDF.withColumn("week_ago", date_sub(col("today"), 7)).select(
     datediff(col("week_ago"), col("today"))
 ).show(1)
+
 dateDF.select(
     to_date(lit("2016-01-01")).alias("start"), to_date(lit("2017-05-22")).alias("end")
 ).select(months_between(col("start"), col("end"))).show(1)
@@ -214,3 +215,155 @@ from pyspark.sql.functions import to_timestamp
 cleanDateDF.select(to_timestamp(col("date"), dateFormat)).show()
 
 cleanDateDF.filter(col("date2") > lit("2017-12-12")).show()
+
+# Coalesce
+from pyspark.sql.functions import coalesce
+
+df.select(coalesce(col("Description"), col("CustomerId"))).show()
+
+# ifnull, nullif, nvl, nvl2
+
+"""
+    SELECT 
+        ifnull(null, 'return_value') // 'return_value' because first value is null
+        nullif('value', 'value') // null because both values match
+        nvl(null, 'return_value') // 'return_value' because 1st value is null, Otherwise would return 1st value
+        nvl2('not_null', 'return_value', 'else_value') // 'return_value' because 1st value is not null, Otherwise would return 'else_value'
+"""
+
+# drop null values
+print("************************************************************")
+print(df.count())  # 3108
+print("************************************************************")
+print(df.na.drop("any").count())  # 1968 # Drop if any of the column values has a null
+print("************************************************************")
+print(df.na.drop("all").count())  # 3108, Because all the columns values have to be null
+
+df.na.drop("all", subset=["StockCode", "InvoiceNo"])
+print(
+    df.na.drop("all", subset=["StockCode", "InvoiceNo"]).count()
+)  # 3108, Because all the specified columns values have to be null
+
+# fill
+df.na.fill("All the null values become this string")
+df.na.fill("all", subset=["StockCode", "InvoiceNo"])
+fill_cols_values = {
+    "StockCode": 5,
+    "Description": "No value",
+}  # You can use this to specify different fill value for different columns
+df.na.fill(fill_cols_values)
+
+
+# replace, You can use it for more than null values
+df.na.replace([""], ["Unknown"], "Description")
+
+# Complex Types
+## struct
+from pyspark.sql.functions import struct
+
+complexDF = df.select(struct("Description", "InvoiceNo").alias("complex"))
+complexDF.createOrReplaceTempView("complexDF")
+
+complexDF.select(
+    "complex.Description"
+).show()  # You need to use the dot notation in order to access elements
+complexDF.select(col("complex").getField("Description")).show()  # Similar way
+
+complexDF.select("complex.*")  # Get all values from struct
+
+# Arrays
+
+from pyspark.sql.functions import split, size, array_contains, explode, create_map
+
+## split
+
+df.select(split(col("Description"), " ")).show()
+
+df.select(split(col("Description"), " ").alias("array_col")).selectExpr(
+    "array_col[0]"
+).show(2)
+
+## size
+df.select(size(split(col("Description"), " "))).show(2)
+
+## array_contains
+df.select(array_contains(split(col("Description"), " "), "WHITE")).show(2)
+
+## explode
+df.withColumn("splitted", split(col("Description"), " ")).withColumn(
+    "exploded", explode(col("splitted"))
+).select("Description", "InvoiceNo", "exploded").show(truncate=False)
+
+## map
+df.select(create_map(col("Description"), col("InvoiceNo")).alias("complex_map")).show(
+    2, False
+)
+
+df.select(
+    create_map(col("Description"), col("InvoiceNo")).alias("complex_map")
+).selectExpr("complex_map['WHITE METAL LANTERN']").show(
+    2, False
+)  # You can access elements like arrays
+
+df.select(
+    create_map(col("Description"), col("InvoiceNo")).alias("complex_map")
+).selectExpr("explode(complex_map)").show(2, False)
+
+# JSON
+from pyspark.sql.functions import get_json_object, json_tuple, to_json, from_json
+from pyspark.sql.types import *
+
+jsonDF = spark.range(1).selectExpr(
+    """
+    '{"myJSONKey" : {"myJSONValue" : [1, 2, 3]}}' as jsonString 
+"""
+)
+
+jsonDF.select(
+    get_json_object(col("jsonString"), "$.myJSONKey.myJSONValue[1]").alias("column"),
+    json_tuple(col("jsonString"), "myJSONKey"),
+).show(2, False)
+
+## to_json, Used to convert a struct to a JSON object
+
+df.selectExpr("(InvoiceNo, Description) as myStruct").select(
+    to_json(col("myStruct"))
+).show(truncate=False)
+
+## from_json, Convert from JSON to struct. Will need to define a schema
+
+parseSchema = StructType(
+    (
+        StructField("InvoiceNo", StringType(), True),
+        StructField("Description", StringType(), True),
+    )
+)
+df.selectExpr("(InvoiceNo, Description) as myStruct").select(
+    to_json(col("myStruct")).alias("newJSON")
+).select(from_json(col("newJSON"), parseSchema), col("newJSON")).show(2)
+
+# UDF
+from pyspark.sql.functions import udf
+
+udfExampleDF = spark.range(5).toDF("num")
+
+
+def power3(double_value):
+    return double_value**3
+
+
+power3(2.0)
+power3udf = udf(power3)
+udfExampleDF.select(power3udf(col("num"))).show(2, False)
+
+# register udf, Can be used in SQL. Also, You should register the function in scala before using in Python (More in notes)
+"""
+    // In Scala
+    spark.udf.register("power3", power3(_:Double):Double) 
+"""
+# udfExampleDF.selectExpr("power3(num)").show(2)
+
+from pyspark.sql.types import IntegerType, DoubleType
+
+spark.udf.register("power3py", power3, DoubleType())
+udfExampleDF.selectExpr("power3py(num)").show(2, False)
