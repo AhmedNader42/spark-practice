@@ -1,5 +1,53 @@
 from pyspark.sql import SparkSession
-
+from pyspark.sql.functions import (
+    coalesce,
+    date_add,
+    date_sub,
+    months_between,
+    datediff,
+    lit,
+    to_timestamp,
+    to_date,
+    current_date,
+    current_timestamp,
+    expr,
+    locate,
+    instr,
+    regexp_extract,
+    translate,
+    regexp_replace,
+    ltrim,
+    rtrim,
+    rpad,
+    lpad,
+    trim,
+    lower,
+    upper,
+    initcap,
+    monotonically_increasing_id,
+    corr,
+    round,
+    bround,
+    pow,
+    col,
+    udf,
+    struct,
+    split,
+    size,
+    array_contains,
+    explode,
+    create_map,
+    get_json_object,
+    json_tuple,
+    to_json,
+    from_json,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    StructField,
+    StructType,
+    StringType,
+)
 
 spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
 
@@ -21,7 +69,6 @@ df.createOrReplaceTempView("dfTable")
 df.select("*").show()
 
 # Converting types to Spark types
-from pyspark.sql.functions import lit, col
 
 df.select(lit(5), lit("five"), lit(5.0))
 
@@ -31,7 +78,6 @@ df.where(col("InvoiceNo") != 536365).select("InvoiceNo", "Description").show(5, 
 df.where("InvoiceNo = 536365").show(5, False)
 df.where("InvoiceNo <> 536365").show(5, False)
 
-from pyspark.sql.functions import instr
 
 priceFilter = col("UnitPrice") > 600
 descripFilter = instr(df.Description, "POSTAGE") >= 1
@@ -44,15 +90,12 @@ df.withColumn("isExpensive", DOTCodeFilter & (priceFilter | descripFilter)).wher
 ).select("unitPrice", "isExpensive").show(5)
 
 
-from pyspark.sql.functions import expr
-
 df.withColumn("isExpensive", expr("NOT UnitPrice <= 250")).where("isExpensive").select(
     "Description", "UnitPrice"
 ).show(5)
 
 
 # Working with numbers
-from pyspark.sql.functions import expr, pow
 
 fabricatedQuantity = pow(col("Quantity") * col("UnitPrice"), 2) + 5
 df.select(expr("CustomerId"), fabricatedQuantity.alias("realQuantity")).show(2)
@@ -62,12 +105,10 @@ df.selectExpr(
     2
 )  # Same as above
 
-from pyspark.sql.functions import lit, round, bround
 
 ## Round number
 df.select(round(lit("2.5")), bround(lit("2.5"))).show(2)
 
-from pyspark.sql.functions import corr
 
 df.stat.corr("Quantity", "UnitPrice")
 df.select(corr("Quantity", "UnitPrice")).show()
@@ -76,7 +117,6 @@ df.select(corr("Quantity", "UnitPrice")).show()
 df.describe().show()
 
 ## Exact values
-from pyspark.sql.functions import count, mean, stddev_pop, min, max
 
 colName = "UnitPrice"
 quantileProbs = [0.5]
@@ -86,26 +126,22 @@ df.stat.crosstab("StockCode", "Quantity").show()
 df.stat.freqItems(["StockCode", "Quantity"]).show()
 
 ## Adding unique ID
-from pyspark.sql.functions import monotonically_increasing_id
 
 df.select(monotonically_increasing_id()).show(2)
 
 
 # Working with Strings
 
-from pyspark.sql.functions import initcap
 
 df.select(initcap(col("Description"))).show()
 
 ## Upper and lower case
-from pyspark.sql.functions import lower, upper
 
 df.select(
     col("Description"), lower(col("Description")), upper(lower(col("Description")))
 ).show(2)
 
 ## Trimming
-from pyspark.sql.functions import lit, ltrim, rtrim, rpad, lpad, trim
 
 df.select(
     ltrim(lit("    HELLO    ")).alias("ltrim"),
@@ -116,7 +152,6 @@ df.select(
 ).show(2)
 
 ## Regular expressions
-from pyspark.sql.functions import regexp_replace
 
 regex_string = "BLACK|WHITE|RED|GREEN|BLUE"
 df.select(
@@ -125,12 +160,10 @@ df.select(
 ).show()
 
 ## Encode character as another character
-from pyspark.sql.functions import translate
 
 df.select(translate(col("Description"), "LEET", "1337"), col("Description")).show(2)
 
 ## Match based on certain regex
-from pyspark.sql.functions import regexp_extract
 
 extract_str = "(BLACK|WHITE|RED|GREEN|BLUE)"
 
@@ -139,7 +172,6 @@ df.select(
     col("Description"),
 ).show(10)
 
-from pyspark.sql.functions import instr
 
 containsBlack = instr(col("Description"), "BLACK") >= 1
 containsWhite = instr(col("Description"), "WHITE") >= 1
@@ -147,8 +179,6 @@ df.withColumn("hasSimpleColor", containsBlack | containsWhite).where(
     "hasSimpleColor"
 ).select("Description").show(3, False)
 
-
-from pyspark.sql.functions import expr, locate
 
 simpleColors = ["black", "white", "red", "green", "blue"]
 
@@ -166,7 +196,6 @@ df.select(*selectedColumns).where(expr("is_white OR is_red")).select(
 ).show(3, False)
 
 # Dates and timestamps
-from pyspark.sql.functions import current_date, current_timestamp
 
 dateDF = (
     spark.range(10)
@@ -177,12 +206,10 @@ dateDF = (
 dateDF.printSchema()
 
 ## Adding and subtracting dates
-from pyspark.sql.functions import date_add, date_sub
 
 dateDF.select(date_sub(col("today"), 5), date_add(col("today"), 5)).show(1)
 
 ## Date diff
-from pyspark.sql.functions import datediff, months_between, to_date
 
 dateDF.withColumn("week_ago", date_sub(col("today"), 7)).select(
     datediff(col("week_ago"), col("today"))
@@ -192,7 +219,6 @@ dateDF.select(
     to_date(lit("2016-01-01")).alias("start"), to_date(lit("2017-05-22")).alias("end")
 ).select(months_between(col("start"), col("end"))).show(1)
 
-from pyspark.sql.functions import to_date, lit
 
 spark.range(5).withColumn("date", lit("2017-01-01")).select(to_date(col("date"))).show(
     1
@@ -201,7 +227,6 @@ spark.range(5).withColumn("date", lit("2017-01-01")).select(to_date(col("date"))
 ## If parsing of a timestamp fails then it is returned as NULL
 dateDF.select(to_date(lit("2016-20-12")), to_date(lit("2017-12-11"))).show(1)
 
-from pyspark.sql.functions import to_date
 
 dateFormat = "yyyy-dd-MM"
 cleanDateDF = spark.range(1).select(
@@ -210,14 +235,12 @@ cleanDateDF = spark.range(1).select(
 )
 cleanDateDF.createOrReplaceTempView("dateTable2")
 
-from pyspark.sql.functions import to_timestamp
 
 cleanDateDF.select(to_timestamp(col("date"), dateFormat)).show()
 
 cleanDateDF.filter(col("date2") > lit("2017-12-12")).show()
 
 # Coalesce
-from pyspark.sql.functions import coalesce
 
 df.select(coalesce(col("Description"), col("CustomerId"))).show()
 
@@ -225,10 +248,14 @@ df.select(coalesce(col("Description"), col("CustomerId"))).show()
 
 """
     SELECT 
-        ifnull(null, 'return_value') // 'return_value' because first value is null
-        nullif('value', 'value') // null because both values match
-        nvl(null, 'return_value') // 'return_value' because 1st value is null, Otherwise would return 1st value
-        nvl2('not_null', 'return_value', 'else_value') // 'return_value' because 1st value is not null, Otherwise would return 'else_value'
+        ifnull(null, 'return_value') 
+        // 'return_value' because first value is null
+        nullif('value', 'value') 
+        // null because both values match
+        nvl(null, 'return_value') 
+        // 'return_value' because 1st value is null, Otherwise would return 1st value
+        nvl2('not_null', 'return_value', 'else_value') 
+        // 'return_value' because 1st value is not null, Otherwise return 'else_value'
 """
 
 # drop null values
@@ -259,7 +286,6 @@ df.na.replace([""], ["Unknown"], "Description")
 
 # Complex Types
 ## struct
-from pyspark.sql.functions import struct
 
 complexDF = df.select(struct("Description", "InvoiceNo").alias("complex"))
 complexDF.createOrReplaceTempView("complexDF")
@@ -273,7 +299,6 @@ complexDF.select("complex.*")  # Get all values from struct
 
 # Arrays
 
-from pyspark.sql.functions import split, size, array_contains, explode, create_map
 
 ## split
 
@@ -310,8 +335,6 @@ df.select(
 ).selectExpr("explode(complex_map)").show(2, False)
 
 # JSON
-from pyspark.sql.functions import get_json_object, json_tuple, to_json, from_json
-from pyspark.sql.types import *
 
 jsonDF = spark.range(1).selectExpr(
     """
@@ -343,7 +366,6 @@ df.selectExpr("(InvoiceNo, Description) as myStruct").select(
 ).select(from_json(col("newJSON"), parseSchema), col("newJSON")).show(2)
 
 # UDF
-from pyspark.sql.functions import udf
 
 udfExampleDF = spark.range(5).toDF("num")
 
@@ -356,14 +378,14 @@ power3(2.0)
 power3udf = udf(power3)
 udfExampleDF.select(power3udf(col("num"))).show(2, False)
 
-# register udf, Can be used in SQL. Also, You should register the function in scala before using in Python (More in notes)
+# register udf, Can be used in SQL. Also, You should register the function in scala
+# before using in Python (More in notes)
 """
     // In Scala
     spark.udf.register("power3", power3(_:Double):Double) 
 """
 # udfExampleDF.selectExpr("power3(num)").show(2)
 
-from pyspark.sql.types import IntegerType, DoubleType
 
 spark.udf.register("power3py", power3, DoubleType())
 udfExampleDF.selectExpr("power3py(num)").show(2, False)

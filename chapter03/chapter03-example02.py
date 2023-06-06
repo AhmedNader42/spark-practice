@@ -8,8 +8,7 @@ from pyspark.sql.functions import col, date_format
 from pyspark.sql import SparkSession
 
 
-spark = SparkSession.builder.master(
-    "local[1]").appName("spark-practice").getOrCreate()
+spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
 
 """_summary_
     This chapter covers the following:
@@ -45,12 +44,8 @@ staticSchema = staticDataFrame.schema
 # Machine learning and advanced analytics
 staticDataFrame.printSchema()
 preppedDataFrame = (
-    staticDataFrame
-    .na
-    .fill(0)
-    .withColumn(
-        "day_of_week",
-        date_format(col("InvoiceDate"), "EEEE"))
+    staticDataFrame.na.fill(0)
+    .withColumn("day_of_week", date_format(col("InvoiceDate"), "EEEE"))
     .coalesce(5)
 )
 
@@ -60,15 +55,10 @@ testDataFrame = preppedDataFrame.where("InvoiceDate >= '2011-07-01'")
 print("Training count: " + str(trainDataFrame.count()))
 print("Test count: " + str(testDataFrame.count()))
 
-indexer = (
-    StringIndexer()
-    .setInputCol("day_of_week")
-    .setOutputCol("day_of_week_index"))
+indexer = StringIndexer().setInputCol("day_of_week").setOutputCol("day_of_week_index")
 
 encoder = (
-    OneHotEncoder()
-    .setInputCol("day_of_week_index")
-    .setOutputCol("day_of_week_encoded")
+    OneHotEncoder().setInputCol("day_of_week_index").setOutputCol("day_of_week_encoded")
 )
 
 vectorAssembler = (
@@ -77,28 +67,15 @@ vectorAssembler = (
     .setOutputCol("features")
 )
 
-transformationPipeline = (
-    Pipeline()
-    .setStages([indexer, encoder, vectorAssembler])
-)
+transformationPipeline = Pipeline().setStages([indexer, encoder, vectorAssembler])
 
-fittedPipeline = (
-    transformationPipeline
-    .fit(trainDataFrame)
-)
+fittedPipeline = transformationPipeline.fit(trainDataFrame)
 
-transformedTraining = (
-    fittedPipeline
-    .transform(trainDataFrame)
-)
+transformedTraining = fittedPipeline.transform(trainDataFrame)
 
 transformedTraining.cache()
 
-kmeans = (
-    KMeans()
-    .setK(20)
-    .setSeed(1)
-)
+kmeans = KMeans().setK(20).setSeed(1)
 
 kmModel = kmeans.fit(transformedTraining)
 kmModel.computeCost(transformedTraining)

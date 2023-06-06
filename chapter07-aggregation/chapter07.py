@@ -1,4 +1,29 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, to_date, desc, max, dense_rank, rank
+from pyspark.sql.window import Window
+from pyspark.sql.functions import (
+    count,
+    countDistinct,
+    approxCountDistinct,
+    first,
+    last,
+    min,
+    sum,
+    sumDistinct,
+    avg,
+    expr,
+    var_pop,
+    stddev_pop,
+    var_samp,
+    stddev_samp,
+    skewness,
+    kurtosis,
+    corr,
+    covar_pop,
+    covar_samp,
+    collect_list,
+    collect_set,
+)
 
 
 spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
@@ -19,39 +44,14 @@ df.createOrReplaceTempView("dfTable")
 df.count() == 541909  # To execute the caching action
 
 # count
-from pyspark.sql.functions import (
-    count,
-    countDistinct,
-    approxCountDistinct,
-    first,
-    last,
-    min,
-    max,
-    sum,
-    sumDistinct,
-    avg,
-    expr,
-    var_pop,
-    stddev_pop,
-    var_samp,
-    stddev_samp,
-    skewness,
-    kurtosis,
-    corr,
-    covar_pop,
-    covar_samp,
-    collect_list,
-    collect_set,
-    count,
-)
-
 df.select(count("StockCode")).show()  # 541909, Warning: Will count all the nulls
 
 # count distinct
 
 df.select(countDistinct("StockCode")).show()
 
-# approx count distinct, When working with large datasets, Oftentimes the exact count is irrelevant to a certain degree of accuracy
+# approx count distinct, When working with large datasets, Oftentimes the exact count is
+# irrelevant to a certain degree of accuracy
 df.select(
     approxCountDistinct("StockCode", 0.1)
 ).show()  # 3364, Because we specified a big maximum estimation error
@@ -112,9 +112,6 @@ df.groupBy("InvoiceNo").agg(expr("avg(Quantity)"), expr("stddev_pop(Quantity)"))
 
 
 # Windows
-from pyspark.sql.functions import col, to_date, desc, max, dense_rank, rank
-from pyspark.sql.window import Window
-
 spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 
 dfWithDate = df.withColumn("date", to_date(col("InvoiceDate"), "MM/d/yyyy H:mm"))
@@ -139,7 +136,8 @@ dfWithDate.where("CustomerId IS NOT NULL").orderBy("CustomerId").select(
     maxPurchaseQuantity.alias("maxPurchaseQuantity"),
 ).show()
 
-# Grouping Sets, incomplete example since grouping set function is only available in SQL and rollup or cube operations offer the same results
+# Grouping Sets, incomplete example since grouping set function is only available in SQL
+# and rollup or cube operations offer the same results
 dfNoNull = dfWithDate.drop()
 dfNoNull.createOrReplaceTempView("dfNoNull")
 

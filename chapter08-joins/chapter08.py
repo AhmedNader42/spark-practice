@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import expr
 
 
 spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
@@ -50,7 +51,8 @@ person.join(graduateProgram, joinExpression, joinType).show()
 joinType = "right_outer"
 person.join(graduateProgram, joinExpression, joinType).show()
 
-# left_semi join, Doesn't retrieve any values from the right table. It will only check the value exists. Think of it like a filter on the dataframe
+# left_semi join, Doesn't retrieve any values from the right table. It will only check
+# the value exists. Think of it like a filter on the dataframe
 joinType = "left_semi"
 graduateProgram.join(person, joinExpression, joinType).show()
 
@@ -60,18 +62,19 @@ graduateProgram2 = graduateProgram.union(
 graduateProgram2.createOrReplaceTempView("gradProgram2")
 graduateProgram2.join(person, joinExpression, joinType).show()
 
-# left_anti join, Opposite of the semi join. It will only keep the values that DO NOT exist in the right df
+# left_anti join, Opposite of the semi join. It will only keep the values that DO NOT
+# exist in the right df
 joinType = "left_anti"
 graduateProgram.join(person, joinExpression, joinType).show()
 
-# cross join, Is an INNER join with no matching condition, So it will match every row on the left ot every row on the right. Causing an explosion in the number of rows
+# cross join, Is an INNER join with no matching condition, So it will match every row on
+# the left ot every row on the right. Causing an explosion in the number of rows
 
 joinType = "cross"
 graduateProgram.join(person, joinExpression, joinType).show()
 person.crossJoin(graduateProgram).show()
 
 # joins on complex types
-from pyspark.sql.functions import expr
 
 person.withColumnRenamed("id", "presonId").join(
     sparkStatus, expr("array_contains(spark_status, id)")
@@ -82,8 +85,9 @@ gradProgramDupe = graduateProgram.withColumnRenamed("id", "graduate_program")
 joinExpr = gradProgramDupe["graduate_program"] == person["graduate_program"]
 
 person.join(gradProgramDupe, joinExpr).show()
-# person.join(gradProgramDupe, joinExpr).select("graduate_program").show() # Causes an error
 
+# Causes an error
+# person.join(gradProgramDupe, joinExpr).select("graduate_program").show()
 # Approach 1: Different join expression
 person.join(gradProgramDupe, "graduate_program").select("graduate_program").show()
 

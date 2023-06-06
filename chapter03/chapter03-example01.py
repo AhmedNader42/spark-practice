@@ -2,8 +2,7 @@ from pyspark.sql.functions import window, desc, col
 from pyspark.sql import SparkSession
 
 
-spark = SparkSession.builder.master(
-    "local[1]").appName("spark-practice").getOrCreate()
+spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
 
 """_summary_
     This chapter covers the following:

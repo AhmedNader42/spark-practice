@@ -1,4 +1,6 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
+from pyspark.sql.types import StructField, StructType, StringType, LongType
+from pyspark.sql.functions import col, column, expr, lit
 
 
 spark = SparkSession.builder.master("local[1]").appName("spark-practice").getOrCreate()
@@ -11,7 +13,6 @@ df = spark.read.format("json").load(flightDataPath + "json/2015-summary.json")
 
 df.printSchema()
 
-from pyspark.sql.types import StructField, StructType, StringType, LongType
 
 myManualSchema = StructType(
     [
@@ -29,13 +30,13 @@ df.printSchema()
 
 # Columns and expressions
 """
-        To Spark, columns are logical constructions that simply represent a value computed on a per-
-    record basis by means of an expression. This means that to have a real value for a column, we
-    need to have a row; and to have a row, we need to have a DataFrame. You cannot manipulate an
-    individual column outside the context of a DataFrame; you must use Spark transformations
-    within a DataFrame to modify the contents of a column.
+        To Spark, columns are logical constructions that simply represent a value 
+    computed on a per-record basis by means of an expression. This means that to have 
+    a real value for a column, we need to have a row; and to have a row, we need to have
+    a DataFrame. You cannot manipulate an individual column outside the context of 
+    a DataFrame; you must use Spark transformations within a DataFrame to modify the 
+    contents of a column.
 """
-from pyspark.sql.functions import col, column
 
 col("someColumnName")
 column("someColumnName")
@@ -46,7 +47,6 @@ column("someColumnName")
 # Columns are just expressions
 (((col("someCol") + 5) * 200) - 6) < col("otherCol")
 
-from pyspark.sql.functions import expr
 
 expr("(((someCol + 5) * 200) - 6) < otherCol")
 
@@ -56,8 +56,6 @@ print(spark.read.format("json").load(flightDataPath + "json/2015-summary.json").
 print(df.first())
 
 # Creating Rows
-from pyspark.sql import Row
-
 myRow = Row("Hello", None, 1, False)
 print(myRow[0])
 print(myRow[2])
@@ -92,8 +90,6 @@ df.select("DEST_COUNTRY_NAME").show(2)
 df.select("DEST_COUNTRY_NAME", "ORIGIN_COUNTRY_NAME").show(2)
 
 
-from pyspark.sql.functions import expr, col, column
-
 df.select(
     expr("DEST_COUNTRY_NAME"), col("DEST_COUNTRY_NAME"), column("DEST_COUNTRY_NAME")
 ).show(2)
@@ -114,7 +110,6 @@ df.selectExpr("*", "(DEST_COUNTRY_NAME = ORIGIN_COUNTRY_NAME) as withinCountry")
 df.selectExpr("avg(count)", "count(distinct(DEST_COUNTRY_NAME))").show(2)
 
 # Literals
-from pyspark.sql.functions import lit
 
 df.select(expr("*"), lit(1).alias("One")).show(2)
 
@@ -166,10 +161,9 @@ print(dataFrames[0].count() > dataFrames[1].count())
 # Concatenating and appending Rows (Union)
 """
             WARNING
-    Unions are currently performed based on location, not on the schema. This means that columns will
-    not automatically line up the way you think they might
+    Unions are currently performed based on location, not on the schema. This means that
+    columns will not automatically line up the way you think they might
 """
-from pyspark.sql import Row
 
 schema = df.schema
 newRows = [
@@ -189,12 +183,12 @@ df.orderBy("count", "DEST_COUNTRY_NAME").show(5)
 df.orderBy(col("count"), col("DEST_COUNTRY_NAME")).show(5)
 
 # Specify sort direction explicitly
-from pyspark.sql.functions import desc, asc
 
 df.orderBy(expr("count desc")).show(2)
 df.orderBy(col("count").desc(), col("DEST_COUNTRY_NAME").asc()).show(2)
 
-# To improve performance sort withtin the partitions first before applying transformations
+# To improve performance sort within the partitions first before applying
+# transformations
 spark.read.format("json").load(
     flightDataPath + "json/2015-summary.json"
 ).sortWithinPartitions("count")
@@ -226,8 +220,9 @@ collectDF.collect()
 collectDF.toLocalIterator()
 
 """WARNING
-        Any collection of data to the driver can be a very expensive operation! If you have a large dataset and
-    call collect, you can crash the driver. If you use toLocalIterator and have very large partitions,
-    you can easily crash the driver node and lose the state of your application. This is also expensive
-    because we can operate on a one-by-one basis, instead of running computation in parallel.
+        Any collection of data to the driver can be a very expensive operation! If you 
+    have a large dataset and call collect, you can crash the driver. If you use 
+    toLocalIterator and have very large partitions, you can easily crash the driver node
+    and lose the state of your application. This is also expensive because we can 
+    operate on a one-by-one basis, instead of running computation in parallel.
 """
